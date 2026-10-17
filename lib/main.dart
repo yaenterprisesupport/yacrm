@@ -1,10 +1,28 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api.dart';
 import 'modules.dart';
 import 'screens.dart';
 
-void main() => runApp(const YaApp());
+void main() {
+  runZonedGuarded(() {
+    WidgetsFlutterBinding.ensureInitialized();
+    // Show the real error on screen instead of a blank/grey page.
+    ErrorWidget.builder = (d) => Material(
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: SingleChildScrollView(
+                child: Text('Something went wrong:\n\n${d.exceptionAsString()}',
+                    style: const TextStyle(color: Colors.red)),
+              ),
+            ),
+          ),
+        );
+    runApp(const YaApp());
+  }, (e, st) => debugPrint('Uncaught: $e'));
+}
 
 class YaApp extends StatelessWidget {
   const YaApp({super.key});
@@ -41,16 +59,34 @@ class YaApp extends StatelessWidget {
   }
 }
 
-class Boot extends StatelessWidget {
+class Boot extends StatefulWidget {
   const Boot({super.key});
+  @override
+  State<Boot> createState() => _BootState();
+}
+
+class _BootState extends State<Boot> {
+  late final Future<bool> _f = _start();
+
+  // Never hangs: any error or a slow network falls through to the login screen.
+  Future<bool> _start() async {
+    try {
+      return await Api.restore().timeout(const Duration(seconds: 12));
+    } catch (_) {
+      Api.session = null;
+      return false;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<bool>(
-      future: Api.restore(),
+      future: _f,
       builder: (_, snap) {
-        if (!snap.hasData) return const Scaffold(body: Center(child: CircularProgressIndicator()));
-        return snap.data! ? const HomeScreen() : const LoginScreen();
+        if (snap.connectionState != ConnectionState.done) {
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        }
+        return snap.data == true ? const HomeScreen() : const LoginScreen();
       },
     );
   }
