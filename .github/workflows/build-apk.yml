@@ -20,7 +20,7 @@ jobs:
       - name: Allow internet in release builds
         run: sed -i 's#<application#<uses-permission android:name="android.permission.INTERNET"/>\n    <application#' android/app/src/main/AndroidManifest.xml
       - run: flutter pub get
-      - run: flutter build apk --release
+      - run: flutter build apk --release --no-shrink
       - uses: actions/upload-artifact@v4
         with:
           name: ya-crm-apk
