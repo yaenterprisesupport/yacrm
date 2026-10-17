@@ -83,15 +83,21 @@ class Api {
     final role = pick(['role'], 'employee').toLowerCase().replaceAll(RegExp(r'[\s-]+'), '_');
     session = Session(pick(['employeeId', 'id', 'userId'], user),
         pick(['name', 'fullName', 'username'], user), role);
-    (await SharedPreferences.getInstance()).setString('session', jsonEncode(session!.toJson()));
+    try {
+      (await SharedPreferences.getInstance()).setString('session', jsonEncode(session!.toJson()));
+    } catch (_) {} // storage is optional: login still works if it fails
     await loadPermissions();
   }
 
   static Future<bool> restore() async {
-    final s = (await SharedPreferences.getInstance()).getString('session');
-    if (s == null) return false;
-    final m = jsonDecode(s) as Map;
-    session = Session(m['id'] as String, m['name'] as String, m['role'] as String);
+    try {
+      final s = (await SharedPreferences.getInstance()).getString('session');
+      if (s == null) return false;
+      final m = jsonDecode(s) as Map;
+      session = Session(m['id'] as String, m['name'] as String, m['role'] as String);
+    } catch (_) {
+      return false;
+    }
     await loadPermissions();
     return true;
   }
@@ -99,7 +105,9 @@ class Api {
   static Future<void> logout() async {
     session = null;
     _perm = {};
-    await (await SharedPreferences.getInstance()).remove('session');
+    try {
+      await (await SharedPreferences.getInstance()).remove('session');
+    } catch (_) {}
   }
 
   static Future<void> loadPermissions() async {

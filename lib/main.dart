@@ -106,7 +106,9 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    SharedPreferences.getInstance().then((p) => _user.text = p.getString('lastUser') ?? '');
+    SharedPreferences.getInstance()
+        .then((p) => _user.text = p.getString('lastUser') ?? '')
+        .catchError((_) => '');
   }
 
   Future<void> _login() async {
@@ -116,7 +118,9 @@ class _LoginScreenState extends State<LoginScreen> {
     });
     try {
       await Api.login(_user.text.trim(), _pass.text);
-      (await SharedPreferences.getInstance()).setString('lastUser', _user.text.trim());
+      try {
+        (await SharedPreferences.getInstance()).setString('lastUser', _user.text.trim());
+      } catch (_) {}
       if (mounted) {
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
       }
